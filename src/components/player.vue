@@ -156,7 +156,7 @@
     </div>
     <video
       @click="togglePlay"
-      src="https://d2of6bhnpl91ni.cloudfront.net/cms/Tutorial-video-maker-3a570d8068.mp4"
+      :src="src"
       ref="video"
       @pause="removePaused"
       @play="removePaused"
@@ -185,6 +185,12 @@ const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
 })
 export default {
+  props: {
+    src: {
+      type: String,
+      required: true,
+    },
+  },
   data() {
     return {
       isPaused: true,

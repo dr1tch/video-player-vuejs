@@ -1,8 +1,7 @@
 <template>
   <section class="section">
     <vue-player
-      src="http://techslides.com/demos/sample-videos/small.mp4"
-      video-placeholder-src="http://techslides.com/demos/sample-videos/small.mp4"
+      src="https://d2of6bhnpl91ni.cloudfront.net/cms/Tutorial-video-maker-3a570d8068.mp4"
     >
     </vue-player>
   </section>
