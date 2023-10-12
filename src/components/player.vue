@@ -1,19 +1,23 @@
 <template>
   <div
+    ref="videoContainer"
     class="video-container"
     allowFullscreen
+    data-volume-level="high"
     allowPictureOnPicture
-    ref="videoContainer"
     :class="videoContainerClassList"
     tabindex="0"
     @keydown="handleKeyDown"
-    data-volume-level="high"
   >
-    <div class="video-controls-container" :class="{ isPaused: 'pause' }">
-      <img class="thumbnail-img" ref="thumbnailImg" />
+    <div
+      ref="videoControlsContainer"
+      class="video-controls-container"
+      :class="{ isPaused: 'pause' }"
+    >
+      <img ref="thumbnailImg" class="thumbnail-img" />
       <div
-        class="timeline-container"
         ref="timelineContainer"
+        class="timeline-container"
         @mousemove="handleTimelineUpdate"
         @mousedown="toggleScrubbing"
         @mouseover="handleScrubbingOnMouseup"
@@ -25,10 +29,10 @@
       </div>
       <div class="controls">
         <button
-          class="play-pause-button"
           ref="playPauseBtn"
-          @click="togglePlay"
+          class="play-pause-button"
           :title="isPaused ? 'Play' : 'Pause'"
+          @click="togglePlay"
         >
           <svg
             v-if="isPaused || isFinished"
@@ -43,10 +47,10 @@
         </button>
         <div class="volume-container">
           <button
-            class="mute-btn"
             ref="muteBtn"
-            @click="toggleMute"
+            class="mute-btn"
             :title="isMuted ? 'Unmute' : 'Mute'"
+            @click="toggleMute"
           >
             <svg v-if="isMuted" class="volume-muted-icon" viewBox="0 0 24 24">
               <path
@@ -70,12 +74,12 @@
             </div>
           </button>
           <input
+            ref="volumeSlider"
             class="volume-slider"
             type="range"
             min="0"
             max="1"
             step="any"
-            ref="volumeSlider"
             :value="volume"
             @change="handleVolumeChange"
           />
@@ -86,16 +90,16 @@
           <div class="total-time">{{ duration }}</div>
         </div>
         <button
-          @click="changePlaybackSpeed"
           ref="speedBtn"
           class="speed-btn wide"
+          @click="changePlaybackSpeed"
         >
           {{ playbackRate }}
         </button>
         <button
+          ref="miniPlayerBtn"
           title="Picture in picture"
           class="mini-player-btn"
-          ref="miniPlayerBtn"
           @click="toggleMiniPlayerMode"
         >
           <svg viewBox="0 0 24 24">
@@ -106,10 +110,10 @@
           </svg>
         </button>
         <button
-          class="theater-btn"
           ref="theaterBtn"
-          @click="toggleTheaterMode"
           :title="isTheaterMode ? 'Default Mode' : 'Theater Mode'"
+          class="theater-btn"
+          @click="toggleTheaterMode"
         >
           <svg v-if="isTheaterMode" class="tall" viewBox="0 0 24 24">
             <path
@@ -126,10 +130,10 @@
         </button>
         <button
           v-if="!isFullscreenMode"
-          class="full-screen-btn"
           ref="fullscreenBtn"
-          @click="openFullscreenMode"
+          class="full-screen-btn"
           title="Full screen (f)"
+          @click="openFullscreenMode"
         >
           <svg class="open" viewBox="0 0 24 24">
             <path
@@ -140,10 +144,10 @@
         </button>
         <button
           v-else
-          class="full-screen-btn"
           ref="fullscreenBtn"
-          @click="closeFullscreenMode"
+          class="full-screen-btn"
           title="Exit full screen (f)"
+          @click="closeFullscreenMode"
         >
           <svg class="close" viewBox="0 0 24 24">
             <path
@@ -155,29 +159,14 @@
       </div>
     </div>
     <video
-      @click="togglePlay"
-      :src="src"
       ref="video"
-      @pause="removePaused"
-      @play="removePaused"
+      :src="src"
+      @click="togglePlay"
       @ended="handleEnded"
       @loadedmetadata="getDuration"
       @timeupdate="handleTimeUpdate"
     />
   </div>
-  <ul>
-    <li>isPaused: {{ isPaused }}</li>
-    <li>isFinished: {{ isFinished }}</li>
-    <li>isTheaterMode: {{ isTheaterMode }}</li>
-    <li>isFullscreenMode: {{ isFullscreenMode }}</li>
-    <li>isMiniPlayerMode: {{ isMiniPlayerMode }}</li>
-    <li>isMuted: {{ isMuted }}</li>
-    <li>isScrubbing: {{ isScrubbing }}</li>
-    <li>duration: {{ duration }}</li>
-    <li>currentTime: {{ currentTime }}</li>
-    <li>videoDuration: {{ videoDuration }}</li>
-    <li>realtime: {{ realtime }}</li>
-  </ul>
 </template>
 
 <script>
@@ -185,6 +174,7 @@ const leadingZeroFormatter = new Intl.NumberFormat(undefined, {
   minimumIntegerDigits: 2,
 })
 export default {
+  name: "VideoPlayer",
   props: {
     src: {
       type: String,
@@ -209,8 +199,38 @@ export default {
       wasPaused: null,
     }
   },
+  computed: {
+    videoContainerClassList() {
+      return {
+        pause: this.isPaused,
+        theater: this.isTheaterMode,
+        scrubbing: this.isScrubbing,
+      }
+    },
+  },
+  mounted() {
+    // Add an event listener to track focus changes
+    window.addEventListener("keydown", this.handleKeyDown)
+    this.$refs.video.addEventListener("volumechange", this.handleMuted)
+    document.addEventListener("mousemove", this.handleScrubbingOnMousemove)
+    this.$refs.videoControlsContainer.addEventListener("mouseout", function () {
+      this.isScrubbing = false
+    })
+  },
+  destroyed() {
+    // Don't forget to remove the event listener when the component is destroyed
+    window.removeEventListener("keydown", this.handleKeyDown)
+    this.$refs.video.removeEventListener("volumechange", this.handleMuted)
+    document.removeEventListener("mousemove", this.handleScrubbingOnMousemove)
+    this.$refs.videoControlsContainer.removeEventListener(
+      "mouseout",
+      function () {
+        this.isScrubbing = false
+      }
+    )
+  },
   methods: {
-    togglePlay(e) {
+    togglePlay() {
       this.$refs.video && this.$refs.video?.paused
         ? this.$refs.video.play()
         : this.$refs.video.pause()
@@ -333,10 +353,7 @@ export default {
       const rect = this.$refs.timelineContainer.getBoundingClientRect()
       const percent =
         Math.min(Math.max(0, e.x - rect.x), rect.width) / rect.width
-      const previewImgNumber = Math.max(
-        1,
-        Math.floor((percent * this.duration) / 10)
-      )
+
       this.$refs.timelineContainer.style.setProperty(
         "--preview-position",
         percent
@@ -400,23 +417,21 @@ export default {
     },
     handleKeyDown(e) {
       const tagName = document.activeElement.tagName.toLowerCase()
-      const element = this.$refs.videoContainer
 
       if (tagName === "input") return
 
       switch (e.key.toLowerCase()) {
         case " ":
           if (tagName === "button") return
+          break
         case "k":
           this.togglePlay()
           break
         case "escape":
-          // element.focus()
           console.log("escape clicked")
           this.closeFullscreenMode()
           break
         case "f":
-          // element.focus()
           this.isFullscreenMode
             ? this.closeFullscreenMode()
             : this.openFullscreenMode()
@@ -438,28 +453,6 @@ export default {
         case "l":
           this.skip(5)
           break
-      }
-    },
-  },
-  mounted() {
-    // Add an event listener to track focus changes
-    window.addEventListener("keydown", this.handleKeyDown)
-    this.$refs.video.addEventListener("volumechange", this.handleMuted)
-    document.addEventListener("mousemove", this.handleScrubbingOnMousemove)
-  },
-  destroyed() {
-    // Don't forget to remove the event listener when the component is destroyed
-    window.removeEventListener("keydown", this.handleKeyDown)
-    this.$refs.video.removeEventListener("volumechange", this.handleMuted)
-    document.removeEventListener("mousemove", this.handleScrubbingOnMousemove)
-  },
-
-  computed: {
-    videoContainerClassList() {
-      return {
-        pause: this.isPaused,
-        theater: this.isTheaterMode,
-        scrubbing: this.isScrubbing,
       }
     },
   },
